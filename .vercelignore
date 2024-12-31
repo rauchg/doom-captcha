@@ -1,0 +1,4 @@
+# everything except for public/
+*
+!public
+!public/**

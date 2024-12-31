@@ -1,0 +1,1068 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DOOM® CAPTCHA</title>
+
+  <!-- OpenGraph -->
+  <meta property="og:title" content="DOOM® CAPTCHA" />
+  <meta property="og:site_name" content="DOOM® CAPTCHA" />
+  <meta property="og:url" content="https://doom-captcha.vercel.app" />
+  <meta property="og:description" content="Prove you're human by playing DOOM" />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://doom-captcha.vercel.app/card.png" />
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:site" content="@rauchg" />
+  <meta name="twitter:creator" content="@rauchg" />
+  <meta name="twitter:title" content="DOOM® CAPTCHA" />
+  <meta name="twitter:description" content="Prove you're human by playing DOOM" />
+  <meta name="twitter:image" content="https://doom-captcha.vercel.app/card.png" />
+  <style>
+    body,
+    html {
+      height: 100%;
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: #f5f5f5;
+      font-family:
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        Roboto,
+        Oxygen,
+        Ubuntu,
+        Cantarell,
+        "Open Sans",
+        "Helvetica Neue",
+        sans-serif;
+      user-select: none;
+      position: fixed;
+      width: 100%;
+      overflow: hidden;
+    }
+
+    .captcha-container {
+      border: 1px solid #ccc;
+      background-color: white;
+      outline: none;
+      transition: box-shadow 0.3s ease;
+    }
+
+    .captcha-container:focus {
+      box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.3);
+    }
+
+    .captcha-header {
+      background-color: #4285f4;
+      color: white;
+      padding: 16px;
+      margin: 5px;
+      margin-bottom: 0;
+    }
+
+    .captcha-header h2 {
+      margin: 0;
+      font-size: 14px;
+      font-weight: normal;
+    }
+
+    .captcha-header p {
+      margin: 4px 0 0;
+      font-size: 22px;
+      font-weight: bold;
+    }
+
+    .captcha-canvas-container {
+      margin: 5px;
+      min-width: 320px;
+      min-height: 200px;
+      width: 360px;
+      aspect-ratio: 16 / 10;
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: #999;
+      font-size: 14px;
+      resize: horizontal;
+      overflow: auto;
+    }
+
+    @media (min-width: 768px) {
+      .captcha-canvas-container {
+        width: 480px;
+      }
+    }
+
+    .captcha-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      image-rendering: pixelated;
+      pointer-events: none;
+      opacity: 0.8;
+      transition: opacity 0.15s ease;
+    }
+
+    .captcha-container:focus .captcha-canvas {
+      opacity: 1;
+    }
+
+    .captcha-footer {
+      position: relative;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 5px;
+      border-top: 1px solid #ccc;
+    }
+
+    .captcha-controls {
+      display: flex;
+      gap: 12px;
+    }
+
+    .captcha-button {
+      border: none;
+      padding: 0 16px;
+      border-radius: 4px;
+      font-size: 14px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .captcha-refresh-button {
+      background-color: #e0e0e0;
+      color: #444;
+      cursor: pointer;
+    }
+
+    .captcha-refresh-button:hover {
+      background-color: #d0d0d0;
+    }
+
+    .captcha-refresh-button:active {
+      background-color: #c0c0c0;
+    }
+
+    .captcha-refresh-icon {
+      width: 14px;
+      height: 14px;
+      fill: #444;
+    }
+
+    .captcha-verify-button {
+      position: relative;
+      background-color: #f0f0f0;
+      min-width: 70px;
+      color: #888;
+      pointer-events: none;
+      cursor: default;
+      padding: 0 12px 0 24px;
+      transition: background-color 0.3s ease;
+      white-space: nowrap;
+    }
+
+    .success-message {
+      color: #000;
+      display: none;
+      text-align: center;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+        "Liberation Mono", "Courier New", monospace;
+    }
+
+    .success-message h2 {
+      margin: 0 0 10px 0;
+      font-size: 18px;
+      color: #4285f4;
+    }
+
+    .success-message a {
+      color: #4285f4;
+      text-decoration: none;
+    }
+
+    .success-message a:hover {
+      text-decoration: underline;
+    }
+
+    @keyframes killFlash {
+      0% {
+        background-color: #4285f4;
+      }
+
+      100% {
+        background-color: var(--end-color, #f0f0f0);
+      }
+    }
+
+    @keyframes iconFlash {
+      0% {
+        fill: white;
+      }
+
+      100% {
+        fill: var(--end-icon-color, #888888);
+      }
+    }
+
+    .captcha-verify-icon {
+      width: 18px;
+      height: 18px;
+      position: absolute;
+      left: 8px;
+    }
+
+    .captcha-verify-button span {
+      font-weight: 600;
+    }
+
+    .status-message {
+      position: absolute;
+      left: 0;
+      right: 0;
+      text-align: center;
+      color: #888;
+      font-size: 14px;
+      display: none;
+    }
+
+    .status-message.focus {
+      display: none;
+    }
+
+    .status-message.death {
+      color: #ff4444;
+      display: none;
+    }
+
+    .status-message.instructions {
+      color: #666;
+      display: none;
+    }
+
+    /* Show "Tap to play" when not focused, regardless of death state */
+    .captcha-container:not(:focus) .status-message.focus {
+      display: block;
+    }
+
+    /* Show instructions when focused and not dead */
+    .captcha-container:focus .status-message.instructions {
+      display: block;
+    }
+
+    /* Only show death message when focused */
+    .captcha-container:focus .status-message.death.visible {
+      display: block;
+    }
+
+    /* Hide instructions when death message is visible */
+    .captcha-container:focus .status-message.death.visible~.status-message.instructions {
+      display: none;
+    }
+
+    #debug-toggle {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      z-index: 100;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      background-color: #f0f0f0;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 3px 5px;
+      cursor: pointer;
+    }
+
+    #debug-toggle input {
+      margin-right: 5px;
+    }
+
+    #debug-container {
+      display: none;
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: 50%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.8);
+      z-index: 999;
+    }
+
+    #debug-log {
+      width: 100%;
+      height: 100%;
+      background-color: #1e1e1e;
+      color: #d4d4d4;
+      border: none;
+      padding: 10px;
+      font-family: monospace;
+      font-size: 14px;
+      resize: none;
+    }
+
+    body.debug-active {
+      margin-right: 50%;
+    }
+
+    body.debug-active .captcha-container {
+      transform: translateX(-25%);
+    }
+
+    @media (max-width: 768px) {
+      #debug-toggle {
+        top: 5px;
+        right: 5px;
+        padding: 3px 6px;
+        font-size: 12px;
+      }
+
+      #debug-container {
+        width: 100%;
+        height: 50%;
+        top: auto;
+        bottom: 0;
+      }
+
+      body.debug-active {
+        margin-right: 0;
+        margin-bottom: 50%;
+      }
+
+      body.debug-active .captcha-container {
+        transform: translateY(-25%);
+      }
+    }
+
+    .site-footer {
+      position: fixed;
+      bottom: 20px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+        "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
+      color: #666;
+    }
+
+    .site-footer a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .site-footer a:hover {
+      text-decoration: underline;
+    }
+
+    /* Mobile controls */
+    .mobile-controls {
+      display: none;
+      position: absolute;
+      bottom: 30px;
+      left: 0;
+      right: 0;
+      padding: 10px;
+      pointer-events: none;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+    }
+
+    @media (hover: none) and (pointer: coarse) {
+      .captcha-container:focus .mobile-controls {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      /* Hide keyboard instructions when showing touch controls */
+      .captcha-container:focus .status-message.instructions {
+        display: none;
+      }
+    }
+
+    .d-pad {
+      display: grid;
+      grid-template-columns: repeat(3, 40px);
+      grid-template-rows: repeat(3, 40px);
+      gap: 5px;
+      pointer-events: auto;
+    }
+
+    .fire-button {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.2);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      pointer-events: auto;
+      touch-action: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .d-pad button {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.2);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      color: white;
+      font-size: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: auto;
+      touch-action: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .d-pad button:active,
+    .fire-button:active {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    .d-pad .up {
+      grid-column: 2;
+      grid-row: 1;
+    }
+
+    .d-pad .left {
+      grid-column: 1;
+      grid-row: 2;
+    }
+
+    .d-pad .right {
+      grid-column: 3;
+      grid-row: 2;
+    }
+
+    .d-pad .down {
+      grid-column: 2;
+      grid-row: 3;
+    }
+
+    .site-footer span {
+      margin: 0 4px;
+      opacity: 0.5;
+    }
+
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(2px);
+      z-index: 1000;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      padding: 20px;
+      border-radius: 4px;
+      max-width: 600px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+      z-index: 1001;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+        "Liberation Mono", "Courier New", monospace;
+      font-size: 14px;
+      line-height: 1.5;
+      user-select: text;
+    }
+
+    .modal code {
+      background: #f5f5f5;
+      padding: 2px 4px;
+      border-radius: 3px;
+      font-size: 13px;
+      color: #666;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+        "Liberation Mono", "Courier New", monospace;
+    }
+
+    .modal h2 {
+      margin-top: 0;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-size: 20px;
+      color: #666;
+      padding: 5px;
+    }
+
+    .modal-close:hover {
+      color: #000;
+    }
+  </style>
+</head>
+
+<body>
+  <footer class="site-footer">
+    built with
+    <a href="https://v0.dev/chat/4X85A52Dzde?b=b_tOXbbZzZPgT">v0</a> &
+    <a href="https://vercel.com">vercel</a> <span>/</span>
+    <a href="/" id="how-it-works">how it works</a> <span>/</span>
+    <a href="https://x.com/rauchg">@rauchg</a>
+  </footer>
+
+  <div class="modal-backdrop" id="modal-backdrop"></div>
+  <div class="modal" id="modal">
+    <button class="modal-close" id="modal-close">&times;</button>
+    <h2>How it works</h2>
+    <p>
+      A CAPTCHA that lets you play DOOM® to prove you're human (for
+      educational and entertainment purposes)
+    </p>
+    <p>
+      The project works by leveraging <code>Emscripten</code> to compile a
+      minimal port of Doom to <code>WebAssembly</code> and enable
+      intercommunication between the <code>C</code>-based game runloop (<a
+        href="https://github.com/rauchg/doom-captcha/tree/main/sdldoom-1.10/g_game.c"><code>g_game.c</code></a>) and the
+      <code>JavaScript</code>-based CAPTCHA UI.
+    </p>
+
+    <p>
+      Some extensions were made to the game to introduce relevant events
+      needed for its usage in the context of a CAPTCHA.
+    </p>
+
+    <ul>
+      <li>
+        Started out with a minimal, <code>SDL</code>-based port of Doom that
+        can be efficiently compiled to <code>WebAssembly</code>
+      </li>
+      <li>
+        Tweaked the build to make it compatible with the shareware version of
+        <code>wad</code> (<code>doom1.wad</code>) for legal use
+      </li>
+      <li>
+        Introduced new unofficial process flags:
+        <ul>
+          <li>
+            <code>-nomenu</code> (<a
+              href="https://github.com/rauchg/doom-captcha/tree/main/sdldoom-1.10/m_menu.c"><code>m_menu.c</code></a>)
+            to skip the main menu and jump straight into the game
+          </li>
+          <li>
+            <code>-autoreborn</code> (<a
+              href="https://github.com/rauchg/doom-captcha/tree/main/sdldoom-1.10/p_mobj.c"><code>p_mobj.c</code></a>)
+            to automatically rebirth the player after a 2s delay
+          </li>
+        </ul>
+      </li>
+      <li>
+        Introduced callbacks into <code>JS</code> land to be used by the
+        CAPTCHA UI:
+        <ul>
+          <li><code>onPlayerBorn</code> when the player is born or reborn</li>
+          <li><code>onPlayerKilled</code> when the player is killed</li>
+          <li>
+            <code>onEnemyKilled</code> when the main player kills an enemy
+          </li>
+        </ul>
+      </li>
+      <li>
+        Tweaked the default process flags in
+        <a href="https://github.com/rauchg/doom-captcha/tree/main/sdldoom-1.10/d_main.c"><code>d_main.c</code></a>
+        to make the game more challenging:
+        <ul>
+          <li><code>-skill 5</code> sets the difficulty to "Nightmare!"</li>
+          <li><code>-fast</code> makes it even harder</li>
+          <li>
+            <code>-warp e1m1</code> jumpstarts the game to where the action is
+          </li>
+          <li>
+            <code>-nomenu</code> doesn't let the player trigger the main menu
+          </li>
+        </ul>
+      </li>
+    </ul>
+
+    <p>
+      <a href="https://v0.dev/chat/4X85A52Dzde?b=b_tOXbbZzZPgT">See the v0 UI generation</a>
+      or
+      <a target="_blank" href="https://github.com/rauchg/doom-captcha">get the source</a>.
+    </p>
+
+    <p style="color: #999; font-size: 12px">
+      <em>Built on the shareware version of DOOM® released publically for
+        non-commercial use. DOOM® is a registered trademark of id Software
+        LLC, a ZeniMax Media company.</em>
+    </p>
+  </div>
+
+  <label id="debug-toggle">
+    <input type="checkbox" id="debug-checkbox" />
+    Debug
+  </label>
+  <div id="debug-container">
+    <textarea id="debug-log" readonly></textarea>
+  </div>
+
+  <div class="captcha-container" tabindex="1">
+    <div class="captcha-header">
+      <h2>Play DOOM® and kill</h2>
+      <p>at least 3 monsters</p>
+    </div>
+
+    <div class="captcha-canvas-container">
+      <div id="status">Downloading...</div>
+      <progress id="progress" value="0" max="100" hidden></progress>
+      <canvas class="captcha-canvas" id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
+      <div class="mobile-controls">
+        <div class="d-pad">
+          <button class="up">↑</button>
+          <button class="left">←</button>
+          <button class="right">→</button>
+          <button class="down">↓</button>
+        </div>
+        <button class="fire-button"></button>
+      </div>
+    </div>
+
+    <div class="captcha-footer">
+      <div class="captcha-controls">
+        <button class="captcha-button captcha-refresh-button" aria-label="Refresh challenge" id="refresh-button">
+          <svg class="captcha-refresh-icon" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+            <path
+              d="M7 12v-2l-4 3 4 3v-2h2.997A6.006 6.006 0 0 0 16 8h-2a4 4 0 0 1-3.996 4H7zM9 2H6.003A6.006 6.006 0 0 0 0 8h2a4 4 0 0 1 3.996-4H9v2l4-3-4-3v2z"
+              fill-rule="evenodd" />
+          </svg>
+        </button>
+      </div>
+      <div class="status-message focus">Tap to play</div>
+      <div class="status-message death">You died! Try again</div>
+      <div class="status-message instructions">Use ↓ ↑ ← → space</div>
+      <button class="captcha-button captcha-verify-button" aria-label="Verify, 0 out of 3 monsters killed"
+        id="verify-button">
+        <svg class="captcha-verify-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path fill-rule="evenodd" clip-rule="evenodd"
+            d="M19 21C19 21.5523 18.5523 22 18 22H14H10H6C5.44771 22 5 21.5523 5 21V18.75C5 17.7835 4.2165 17 3.25 17C2.55964 17 2 16.4404 2 15.75V11C2 5.47715 6.47715 1 12 1C17.5228 1 22 5.47715 22 11V15.75C22 16.4404 21.4404 17 20.75 17C19.7835 17 19 17.7835 19 18.75V21ZM17 20V18.75C17 16.9358 18.2883 15.4225 20 15.075V11C20 6.58172 16.4183 3 12 3C7.58172 3 4 6.58172 4 11V15.075C5.71168 15.4225 7 16.9358 7 18.75V20H9V18C9 17.4477 9.44771 17 10 17C10.5523 17 11 17.4477 11 18V20H13V18C13 17.4477 13.4477 17 14 17C14.5523 17 15 17.4477 15 18V20H17ZM11 12.5C11 13.8807 8.63228 15 7.25248 15C5.98469 15 5.99206 14.055 6.00161 12.8306V12.8305C6.00245 12.7224 6.00331 12.6121 6.00331 12.5C6.00331 11.1193 7.12186 10 8.50166 10C9.88145 10 11 11.1193 11 12.5ZM17.9984 12.8306C17.9975 12.7224 17.9967 12.6121 17.9967 12.5C17.9967 11.1193 16.8781 10 15.4983 10C14.1185 10 13 11.1193 13 12.5C13 13.8807 15.3677 15 16.7475 15C18.0153 15 18.0079 14.055 17.9984 12.8306Z"
+            fill="#888888" />
+        </svg>
+        <span>0/3</span>
+      </button>
+    </div>
+  </div>
+
+  <script>
+    window.va =
+      window.va ||
+      function () {
+        (window.vaq = window.vaq || []).push(arguments);
+      };
+  </script>
+  <script defer src="/_vercel/insights/script.js"></script>
+  <script>
+    const debugToggle = document.getElementById("debug-toggle");
+    const debugCheckbox = document.getElementById("debug-checkbox");
+    const debugContainer = document.getElementById("debug-container");
+    const debugLog = document.getElementById("debug-log");
+    const howItWorks = document.getElementById("how-it-works");
+    const modal = document.getElementById("modal");
+    const modalBackdrop = document.getElementById("modal-backdrop");
+    const modalClose = document.getElementById("modal-close");
+
+    function showModal() {
+      modal.style.display = "block";
+      modalBackdrop.style.display = "block";
+      document.body.style.overflow = "hidden";
+    }
+
+    function hideModal() {
+      modal.style.display = "none";
+      modalBackdrop.style.display = "none";
+      document.body.style.overflow = "";
+    }
+
+    howItWorks.addEventListener("click", (e) => {
+      e.preventDefault();
+      showModal();
+    });
+
+    modalClose.addEventListener("click", hideModal);
+    modalBackdrop.addEventListener("click", hideModal);
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && modal.style.display === "block") {
+        hideModal();
+      }
+    });
+
+    // Handle taps outside the canvas container
+    document.addEventListener("touchstart", (e) => {
+      const canvasContainer = document.querySelector(
+        ".captcha-canvas-container",
+      );
+      if (
+        !canvasContainer.contains(e.target) &&
+        captchaContainer.matches(":focus")
+      ) {
+        captchaContainer.blur();
+      }
+    });
+
+    const canvas = document.getElementById("canvas");
+    const statusElement = document.getElementById("status");
+    const progressElement = document.getElementById("progress");
+    const verifyButton = document.getElementById("verify-button");
+    const captchaContainer = document.querySelector(".captcha-container");
+    const refreshButton = document.getElementById("refresh-button");
+    let isDebugActive = false;
+    let enemiesKilled = 0;
+
+    function toggleDebug() {
+      isDebugActive = debugCheckbox.checked;
+      debugContainer.style.display = isDebugActive ? "block" : "none";
+      document.body.classList.toggle("debug-active", isDebugActive);
+      logDebugMessage(
+        "Debug mode " + (isDebugActive ? "activated" : "deactivated"),
+      );
+    }
+
+    function logDebugMessage(message) {
+      const timestamp = new Date().toISOString();
+      debugLog.value += `[${timestamp}] ${message}\n`;
+      debugLog.scrollTop = debugLog.scrollHeight;
+    }
+
+    function restartGame() {
+      logDebugMessage("Restarting game...");
+      enemiesKilled = 0;
+      updateVerifyButton();
+
+      // Track game start
+      va("event", {name: "game_start"});
+
+      // Call the native DOOM restart function directly
+      Module["_G_DoReborn"]();
+    }
+
+    function updateVerifyButton() {
+      const verifySpan = verifyButton.querySelector("span");
+      verifySpan.textContent = `${enemiesKilled}/3`;
+      verifyButton.setAttribute(
+        "aria-label",
+        `Verify, ${enemiesKilled} out of 3 monsters killed`,
+      );
+
+      if (enemiesKilled >= 3) {
+        verifyButton.style.backgroundColor = "#4285f4";
+        verifyButton.style.color = "white";
+        verifyButton.style.cursor = "pointer";
+      } else {
+        verifyButton.style.backgroundColor = "#f0f0f0";
+        verifyButton.style.color = "#888";
+        verifyButton.style.cursor = "default";
+      }
+    }
+
+    debugToggle.addEventListener("change", toggleDebug);
+
+    // prevent losing focus when it's tapped
+    refreshButton.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+    });
+
+    refreshButton.addEventListener("click", (e) => {
+      e.preventDefault();
+      logDebugMessage("Refresh button clicked");
+      captchaContainer.focus();
+      restartGame();
+    });
+
+    function showSuccess() {
+      logDebugMessage("CAPTCHA verified successfully");
+
+      // Track successful solve
+      va("event", {name: "captcha_solved", data: {kills: enemiesKilled}});
+
+      // Pause the game
+      Module.pauseMainLoop();
+
+      // Hide the captcha container completely
+      captchaContainer.style.display = "none";
+
+      // Show success message outside the container
+      const successDiv = document.createElement("div");
+      successDiv.className = "success-message";
+      successDiv.style.display = "block";
+      successDiv.innerHTML = `
+        <h2>🎉 CAPTCHA solved!</h2>
+        <a href="/">Try again</a>
+      `;
+      document.body.appendChild(successDiv);
+
+      // Lazy load and trigger confetti
+      const script = document.createElement("script");
+      script.src =
+        "https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js";
+      script.onload = () => {
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: {y: 0.6},
+        });
+      };
+      script.onerror = () => {
+        logDebugMessage("Failed to load confetti script");
+      };
+      document.body.appendChild(script);
+    }
+
+    captchaContainer.addEventListener("focus", () => {
+      logDebugMessage("CAPTCHA widget focused");
+      va("event", {name: "game_resume"});
+      Module.resumeMainLoop();
+    });
+
+    captchaContainer.addEventListener("blur", () => {
+      logDebugMessage("CAPTCHA widget unfocused");
+      va("event", {name: "game_pause"});
+      Module.pauseMainLoop();
+    });
+
+    // Mobile controls handling
+    const mobileControls = {
+      up: {keyCode: 38}, // Arrow Up
+      down: {keyCode: 40}, // Arrow Down
+      left: {keyCode: 37}, // Arrow Left
+      right: {keyCode: 39}, // Arrow Right
+      fire: {keyCode: 32}, // Space
+    };
+
+    function ensureGameFocused() {
+      if (!captchaContainer.matches(":focus")) {
+        captchaContainer.focus();
+      }
+    }
+
+    function simulateKeyEvent(type, keyCode) {
+      const event = new KeyboardEvent(type, {
+        keyCode: keyCode,
+        bubbles: true,
+        cancelable: true,
+      });
+      captchaContainer.dispatchEvent(event);
+    }
+
+    function handleTouchStart(key) {
+      return (e) => {
+        e.preventDefault();
+        ensureGameFocused();
+        simulateKeyEvent("keydown", mobileControls[key].keyCode);
+      };
+    }
+
+    function handleTouchEnd(key) {
+      return (e) => {
+        e.preventDefault();
+        ensureGameFocused();
+        simulateKeyEvent("keyup", mobileControls[key].keyCode);
+      };
+    }
+
+    // Ensure controls are clickable even when game is not focused
+    document.querySelector(".mobile-controls").addEventListener(
+      "touchstart",
+      (e) => {
+        ensureGameFocused();
+      },
+      {passive: false},
+    );
+
+    // Setup touch controls
+    document
+      .querySelectorAll(".d-pad button, .fire-button")
+      .forEach((button) => {
+        let key = button.className.split(" ")[0];
+        if (!key || key === "fire-button") key = "fire";
+
+        button.addEventListener("touchstart", handleTouchStart(key));
+        button.addEventListener("touchend", handleTouchEnd(key));
+        button.addEventListener("touchcancel", handleTouchEnd(key));
+      });
+
+    var Module = {
+      keyboardListeningElement: captchaContainer,
+      arguments: [
+        "-autoreborn",
+        "-nomenu",
+        "-fast",
+        "-skill",
+        "6",
+        "-warp",
+        "e1m1",
+      ],
+      preRun: [
+        function () {
+          SDL.defaults.copyOnLock = false;
+
+          // Store the original lookupKeyCodeForEvent function
+          const originalLookupKeyCodeForEvent = SDL.lookupKeyCodeForEvent;
+
+          // Create a wrapper that modifies key behavior
+          SDL.lookupKeyCodeForEvent = function (event) {
+            // Ignore Escape key by returning 0
+            if (event.keyCode === 27) {
+              captchaContainer.blur();
+              return 0;
+            }
+
+            // Ignore Ctrl key by returning 0
+            if (event.keyCode === 17) {
+              return 0;
+            }
+
+            // Treat Spacebar (keyCode 32) as Ctrl
+            if (event.keyCode === 32) {
+              return originalLookupKeyCodeForEvent({...event, keyCode: 17});
+            }
+
+            // For all other keys, use the original function
+            return originalLookupKeyCodeForEvent(event);
+          };
+        },
+      ],
+      postRun: [],
+      onPlayerBorn: function () {
+        logDebugMessage("Player born");
+        document
+          .querySelector(".status-message.death")
+          .classList.remove("visible");
+      },
+      onPlayerDeath: function () {
+        logDebugMessage("Player died");
+        va("event", {name: "player_death", data: {kills: enemiesKilled}});
+        enemiesKilled = 0;
+        updateVerifyButton();
+        document
+          .querySelector(".status-message.death")
+          .classList.add("visible");
+      },
+      onEnemyKilled: function () {
+        logDebugMessage("Enemy killed");
+        enemiesKilled++;
+        va("event", {name: "enemy_killed", data: {kills: enemiesKilled}});
+        updateVerifyButton();
+
+        // Get the icon path
+        const iconPath = verifyButton.querySelector(
+          ".captcha-verify-icon path",
+        );
+
+        // Reset animations
+        verifyButton.style.animation = "none";
+        iconPath.style.animation = "none";
+        verifyButton.offsetHeight; // Trigger reflow
+
+        // Set end colors based on kill count
+        const isComplete = enemiesKilled >= 3;
+        verifyButton.style.setProperty(
+          "--end-color",
+          isComplete ? "#4285f4" : "#f0f0f0",
+        );
+        iconPath.style.setProperty(
+          "--end-icon-color",
+          isComplete ? "white" : "#888888",
+        );
+
+        // Trigger animations
+        verifyButton.style.animation = "killFlash 0.5s ease forwards";
+        iconPath.style.animation = "iconFlash 0.5s ease forwards";
+
+        // Show success message when 3 enemies are killed
+        if (enemiesKilled === 3) {
+          showSuccess();
+        }
+      },
+      print: function (text) {
+        if (arguments.length > 1)
+          text = Array.prototype.slice.call(arguments).join(" ");
+        console.log(text);
+        logDebugMessage(text);
+      },
+      printErr: function (text) {
+        if (arguments.length > 1)
+          text = Array.prototype.slice.call(arguments).join(" ");
+        console.error(text);
+        logDebugMessage("Error: " + text);
+      },
+      canvas: canvas,
+      setStatus: function (text) {
+        if (!Module.setStatus.last)
+          Module.setStatus.last = {time: Date.now(), text: ""};
+        if (text === Module.setStatus.last.text) return;
+        const m = text.match(/([^(]+)$$(\d+(\.\d+)?)\/(\d+)$$/);
+        const now = Date.now();
+        if (m && now - Module.setStatus.last.time < 30) return;
+        Module.setStatus.last.time = now;
+        Module.setStatus.last.time = now;
+        Module.setStatus.last.text = text;
+        if (m) {
+          text = m[1];
+          progressElement.value = parseInt(m[2]) * 100;
+          progressElement.max = parseInt(m[4]) * 100;
+          progressElement.hidden = false;
+        } else {
+          progressElement.value = null;
+          progressElement.max = null;
+          progressElement.hidden = true;
+        }
+        statusElement.innerHTML = text;
+      },
+      totalDependencies: 0,
+      monitorRunDependencies: function (left) {
+        this.totalDependencies = Math.max(this.totalDependencies, left);
+        Module.setStatus(
+          left
+            ? "Preparing... (" +
+            (this.totalDependencies - left) +
+            "/" +
+            this.totalDependencies +
+            ")"
+            : "All downloads complete.",
+        );
+      },
+    };
+    Module.setStatus("Downloading ...");
+    window.onerror = function () {
+      Module.setStatus("Exception thrown, see JavaScript console");
+      Module.setStatus = function (text) {
+        if (text) Module.printErr("[post-exception status] " + text);
+      };
+    };
+  </script>
+  {{{ SCRIPT }}}
+</body>
+
+</html>
