@@ -42,6 +42,7 @@
         "Open Sans",
         "Helvetica Neue",
         sans-serif;
+      -webkit-user-select: none;
       user-select: none;
       position: fixed;
       width: 100%;
@@ -377,8 +378,8 @@
       right: 0;
       padding: 10px;
       pointer-events: none;
-      user-select: none;
       -webkit-user-select: none;
+      user-select: none;
       -webkit-touch-callout: none;
     }
 
@@ -468,6 +469,7 @@
       width: 100%;
       height: 100%;
       background: rgba(0, 0, 0, 0.5);
+      -webkit-backdrop-filter: blur(2px);
       backdrop-filter: blur(2px);
       z-index: 1000;
     }
@@ -490,6 +492,7 @@
         "Liberation Mono", "Courier New", monospace;
       font-size: 14px;
       line-height: 1.5;
+      -webkit-user-select: text;
       user-select: text;
     }
 
@@ -521,6 +524,11 @@
 
     .modal-close:hover {
       color: #000;
+    }
+
+    .cpyrgt{
+      color: #999; 
+      font-size: 12px
     }
   </style>
 </head>
@@ -610,10 +618,10 @@
     <p>
       <a href="https://v0.dev/chat/4X85A52Dzde?b=b_tOXbbZzZPgT">See the v0 UI generation</a>
       or
-      <a target="_blank" href="https://github.com/rauchg/doom-captcha">get the source</a>.
+      <a target="_blank" rel="noopener" href="https://github.com/rauchg/doom-captcha">get the source</a>.
     </p>
 
-    <p style="color: #999; font-size: 12px">
+    <p class="cpyrgt">
       <em>Built on the shareware version of DOOM® released publically for
         non-commercial use. DOOM® is a registered trademark of id Software
         LLC, a ZeniMax Media company.</em>
