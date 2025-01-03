@@ -265,6 +265,8 @@ rcsid[] = "$Id: st_stuff.c,v 1.6 1997/02/03 22:45:13 b1 Exp $";
 #define ST_MAPTITLEY		0
 #define ST_MAPHEIGHT		1
 
+#define NO_CHEAT_MAX_COUNT	3
+
 	    
 // main player in game
 static player_t*	plyr; 
@@ -392,6 +394,9 @@ static int	keyboxes[3];
 // a random number per tick
 static int	st_randomnumber;  
 
+// count number of cheat tries
+static unsigned int	no_cheat_count = 0;
+
 
 
 // Massive bunches of cheat shit
@@ -462,6 +467,12 @@ unsigned char	cheat_mypos_seq[] =
     0xb2, 0x26, 0xb6, 0xba, 0x2a, 0xf6, 0xea, 0xff	// idmypos
 }; 
 
+// catch 'id' prefix for all cheats
+unsigned char	cheat_prefix_seq[] =
+{
+    0xb2, 0x26, 0xff
+};
+
 
 // Now what?
 cheatseq_t	cheat_mus = { cheat_mus_seq, 0 };
@@ -485,7 +496,7 @@ cheatseq_t	cheat_powerup[7] =
 cheatseq_t	cheat_choppers = { cheat_choppers_seq, 0 };
 cheatseq_t	cheat_clev = { cheat_clev_seq, 0 };
 cheatseq_t	cheat_mypos = { cheat_mypos_seq, 0 };
-
+cheatseq_t	cheat_prefix = { cheat_prefix_seq, 0 };
 
 // 
 extern char*	mapnames[];
@@ -542,6 +553,27 @@ ST_Responder (event_t* ev)
   {
     if (!netgame)
     {
+      // Dont allow the id prefix
+      if (cht_CheckCheat(&cheat_prefix, ev->data1))
+      {
+	if (no_cheat_count < NO_CHEAT_MAX_COUNT)
+	{
+	  plyr->message = STSTR_NOCHEATING;
+
+	  no_cheat_count++;
+	}
+	else
+	{
+	  plyr->message = STSTR_NOCHEATING_ENOUGH;
+	  plyr->playerstate = PST_DEAD;
+	  plyr->health = 0;
+
+	  no_cheat_count = 0;
+	}
+
+	return false;
+      }
+
       // b. - enabled for more debug fun.
       // if (gameskill != sk_nightmare) {
       
