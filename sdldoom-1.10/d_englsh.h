@@ -353,6 +353,9 @@
 #define STSTR_CHOPPERS	"... doesn't suck - GM"
 #define STSTR_CLEV		"Changing Level..."
 
+#define STSTR_NOCHEATING	  "No cheating"
+#define STSTR_NOCHEATING_ENOUGH	  "Told you so..."
+
 //
 //	F_Finale.C
 //
